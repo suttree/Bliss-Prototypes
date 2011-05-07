@@ -1,0 +1,63 @@
+<html>
+  <head>
+    <title>teevee</title>
+  </head>
+  <body>
+    :D
+    <br/>
+    <br/>
+		<div id="log"></div>
+    <script type="text/javascript">
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      function pad(n) {
+        return n < 10 ? '0' + n.toString(10) : n.toString(10);
+      }
+
+      function scrollToBottom() {
+          window.scrollBy(0, document.body.scrollHeight - document.body.scrollTop);
+      };
+
+      function timestamp() {
+        var d = new Date();
+        return [
+          d.getDate(),
+          months[d.getMonth()],
+          [ pad(d.getHours())
+          , pad(d.getMinutes())
+          , pad(d.getSeconds())
+          , (d.getTime() + "").substr( - 4, 4)
+          ].join(':')
+        ].join(' ');
+      };
+
+      function log(data){
+        output_log.innerHTML += timestamp()+": "+data+"<br />";
+        scrollToBottom();
+      }
+
+      var conn;
+      var output_log = document.getElementById("log");
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/test");
+          conn.onmessage = function(evt) {
+            log(evt.data);
+          };
+          
+          conn.onclose = function() {
+            log("closed");
+          };
+
+          conn.onopen = function() {
+            log("opened");
+          };
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      };
+
+      window.onload = connect;
+    </script>
+  </body>
+</html>

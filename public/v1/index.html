@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <title>teevee</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>  
+    <script type="text/javascript" src="lib/prettyprint.js"></script>
+  </head>
+  <body>
+		<div id="log"></div>
+    <div id="box" style='background-color: rgb(86,217,137); width:50px; height: 50px'></div>
+    <script type="text/javascript">
+      function scrollToBottom() {
+          window.scrollBy(0, document.body.scrollHeight - document.body.scrollTop);
+      };
+
+      function log(data){
+        output_log.innerHTML += data + "<br />";
+        /*document.body.appendChild(prettyPrint(evt));*/
+        scrollToBottom();
+      }
+
+      var hue
+      var conn;
+      var output_log = document.getElementById("log");
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/teevee");
+          conn.onmessage = function(evt) {
+            evt = JSON.parse(evt.data);
+            $("#box").animate({ 
+              backgroundColor: evt.bgcolor,
+              height: evt.height, 
+              width: evt.width,
+            }, 1000);
+          };
+          
+          conn.onclose = function() {
+          };
+
+          conn.onopen = function() {
+          };
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      };
+
+      window.onload = connect;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head class="html5reset-kitchensink-commented">
+    <meta charset="utf-8" />
+    
+    <title>apogee</title>
+    
+    <meta name="description" content="apogee, suttree, troisen, not one without the other." />
+    
+    <meta name="author" content="Duncan Gough" />
+    <meta name="Copyright" content="Copyright Duncan Gough, Suttree 2010. All Rights Reserved." />
+
+    <meta name="DC.title" content="apogee" />
+    <meta name="DC.subject" content="suttree, troisen, not one without the other" />
+    <meta name="DC.creator" content="Duncan Gough, http://suttree.com, @suttree" />
+    
+    <meta name="google-site-verification" content="" />
+    
+    <link rel="shortcut icon" href="-/img/favicon.png"/>
+    
+    <link rel="apple-touch-icon" href="-/img/custom_icon.png"/>
+
+    <link rel="stylesheet" href="-/css/main.css" media="all" />
+    
+    <link rel="stylesheet" href="-/css/_print/main.css" media="print" />
+    
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>  
+    <script type="text/javascript" src="lib/utils.js"></script>
+    <script type="text/javascript" src="lib/fixedCenter.jQuery.js"</script>
+    <script type="text/javascript" src="lib/prettyprint.js"></script>
+  </head>
+  <body id="www-troisen-com">
+  <section>
+    <header>
+      <h1><a href="/">apogee</a></h1>
+      <nav>
+        <ol>
+          <li><a href="">Home</a></li>
+          <li><a href="">About</a></li>
+        </ol>
+      </nav>
+    </header>
+
+		<div id="log"></div>
+
+    <script type="text/javascript">
+      var conn;
+      var text;
+      var output_log = document.getElementById("log");
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/teevee");
+          conn.onmessage = function(evt) {
+            event = JSON.parse(evt.data);
+            addHex(event);
+          };
+          
+          conn.onclose = function() {
+          };
+
+          conn.onopen = function() {
+          };
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      };
+
+      function addHex(event) {
+        var hex = $("<div id='player1' class='hex'></div>");
+        $("body").append(hex);
+        $('#player1').fixedCenter();
+
+        var txt = $("<div id='txt' class='txt'>").html("Players: " + event.players + "<br/>Status: " + event.status);
+        $('#player1').append(txt);
+        $('#txt').fixedCenter();
+      };
+
+      window.onload = function() {
+        connect();
+      }
+    </script>
+    <footer>
+      <p>&copy; Copyright Duncan Gough 2010. All Rights Reserved.</p>
+    </footer>
+  </section>
+  <!-- don't forget Google Analytics -->
+  </body>
+</html>

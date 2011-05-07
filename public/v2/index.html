@@ -1,0 +1,86 @@
+<html>
+  <head>
+    <title>teevee</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>  
+    <script type="text/javascript" src="lib/utils.js"></script>
+    <script type="text/javascript" src="lib/raphael-min.js"></script>
+    <script type="text/javascript" src="lib/prettyprint.js"></script>
+  </head>
+  <style>
+  body
+  {
+    /*
+      background-image:url('images/An_electric_hexagon_background_concept_with_lightning_jumping_across_arcing_and_lighting_up_hexagons.jpg');
+      background-image:url('images/hexagon_by_www_zerr_tk.jpg');
+      background-image:url('images/hexagon_rainbow_by_iankeeber.jpg');
+      background-image:url('images/hexagon_wallpaper_by_wideo.jpg');
+        background-image:url('images/Hexagon_fire_by_borisjer.png');
+        background-image:url('images/My_Definition_Of_Hexagon_by_Zjyslav.jpg');
+    */
+    background-image:url('images/My_Definition_Of_Hexagon_by_Zjyslav.jpg');
+    background-position: bottom left;
+  }
+  </style>
+  <body>
+		<div id="log"></div>
+    <div id="canvas_container"></div>
+
+    <script type="text/javascript">
+      var conn;
+      var text;
+      var output_log = document.getElementById("log");
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/teevee");
+          conn.onmessage = function(evt) {
+            evt = JSON.parse(evt.data);
+            text.attr('text', 'Players: ' + evt.players + '/20\nStatus: ' + evt.status);
+          };
+          
+          conn.onclose = function() {
+          };
+
+          conn.onopen = function() {
+          };
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      };
+
+      window.onload = function() {
+        var paper = new Raphael(document.getElementById('canvas_container'), 1000, 500);
+
+        var hexagon = paper.path("M 500 50 l 50 100 l -50 100 l -150 0 l -50 -100 l 50 -100 z");
+        hexagon.attr(
+          {
+            gradient: '90-#526c7a-#64a0c1',
+            stroke: '#3b4449',
+            'stroke-width': 10,
+            'stroke-linejoin': 'miter',
+            'scale': 0.75,
+          }
+        );
+
+        text = paper.text(425, 150, 'Players: 0/20\nStatus: Ready') 
+        text.attr({'font-size': 14});
+
+        /*
+        var tetronimo = paper.path("M 250 250 l 0 -50 l -50 0 l 0 -50 l -50 0 l 0 50 l -50 0 l 0 50 z"); 
+        tetronimo.attr(
+            {
+              gradient: '90-#526c7a-#64a0c1',
+              stroke: '#3b4449',
+              'stroke-width': 10,
+              'stroke-linejoin': 'round',
+              rotation: -90
+            }
+        );
+        tetronimo.animate({rotation: 360}, 2000, 'bounce');
+        */
+
+        connect();
+      }
+    </script>
+  </body>
+</html>

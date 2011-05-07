@@ -1,0 +1,199 @@
+<html>
+  <head>
+    <title>teevee</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>  
+    <script type="text/javascript" src="lib/utils.js"></script>
+    <script type="text/javascript" src="lib/fixedCenter.jQuery.js"</script>
+    <script type="text/javascript" src="lib/prettyprint.js"></script>
+    <style>
+      body {
+        background-image:url('images/bg//hex.jpg');
+        background-position: bottom left;
+        color: #fff;
+      }
+      .hex {
+        height: 512px;
+        width: 512px;
+        background-image:url('images/tiles/orange.png');
+      }
+      .hex .txt {
+        width: 512px;
+        text-align: center;
+      }
+      .hex2 {
+        height: 128px;
+        width: 128px;
+        background-image:url('images/tiles/blue-128.png');
+      }
+      #ne {
+        position: absolute;
+        top: 40px;
+        right: 150px;
+      }
+      #se {
+        position: absolute;
+        bottom: 40px;
+        right: 150px;
+      }
+      #sw {
+        position: absolute;
+        bottom: 40px;
+        left: 150px;
+      }
+      #nw {
+        position: absolute;
+        top: 40px;
+        left: 150px;
+      }
+    </style>
+  </head>
+  <body>
+		<div id="log"></div>
+
+    <script type="text/javascript">
+      function RadToDeg(radians) {
+        return radians * (180 / Math.PI);
+      }
+
+      function DegToRad(degrees) {
+          return degrees * (Math.PI / 180); 
+      }
+
+      function ConvertToBearing(deg) {
+          return (deg + 360) % 360;
+      }
+
+      // Calculate beating, from http://www.sergemeunier.com/blog/finding-the-bearing-between-two-gps-coordinates
+      function Bearing(lat1, long1, lat2, long2) {
+          //Convert input values to radians 
+          var lat1 = DegToRad(lat1);
+          var long1 = DegToRad(long1);
+          var lat2 = DegToRad(lat2);
+          var long2 = DegToRad(long2);
+
+          var deltaLong = long2 - long1;
+
+          var y = Math.sin(deltaLong) * Math.cos(lat2);
+          var x = Math.cos(lat1) * Math.sin(lat2) -
+          Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLong);
+          var bearing = Math.atan2(y, x);
+          return ConvertToBearing(RadToDeg(bearing));
+      }
+      //Bearing(51.5125291, -0.1401069, 51.45, 0.216667); // Dartford (south east) = 105 degrees
+      //Bearing(51.5125291, -0.1401069, 51.9167, -0.216667); // Stevenage (north west) = 353 degrees
+      //Bearing(51.5125291, -0.1401069, 37.7749, -122.419); // San Fran (west/south west) = 316 degrees (hmmmmm)
+      //Bearing(51.5125291, -0.1401069, 54.9733, -1.61396 ); // Newcastle (west) = 346 degrees (pretty much...)
+
+      var conn;
+      var text;
+      var output_log = document.getElementById("log");
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/teevee");
+          conn.onmessage = function(evt) {
+            event = JSON.parse(evt.data);
+
+            if (event.type == 'connection') {
+              add_hex(event);
+            } else if (event.type == 'location') {
+              plot_players(event.id, event);
+            }
+          };
+          
+          // Must decrement/remove hexagons on the compass as required
+          conn.onclose = function() {};
+
+          conn.onopen = function() {
+            navigator.geolocation.getCurrentPosition(track_location, handle_error, {maximumAge:Infinity, timeout:0});
+
+            function track_location(position)
+            {
+              var lat = position.coords.latitude;
+              var lon = position.coords.longitude;
+
+              try {
+                conn.send(JSON.stringify({
+                  event_type: 'location',
+                  lat: lat,
+                  lon: lon,
+                }));    
+              } catch(err) {
+                alert(err);
+              }
+            }
+
+            // From: http://dev.w3.org/geo/api/spec-source.html
+            function handle_error(error)
+            {
+              switch(error.code) {
+                case error.TIMEOUT:
+                  alert("Still looking...");
+                  navigator.geolocation.getCurrentPosition(track_location, handle_error);
+                  break;
+                default:
+                  alert("This is, like, cutting edge stuffs and you might be, like, bleeding a trail on the blazing edge?");
+                  alert(error.code);
+                  alert(error.message);
+              };
+            }
+          }
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      }
+
+      function add_hex(event) {
+        var hex = $("<div id='player1' class='hex'></div>");
+        $("body").append(hex);
+        $('#player1').fixedCenter();
+
+        var txt = $("<div id='txt' class='txt'>").html("apogee: " + event.id);
+        $('#player1').append(txt);
+        $('#txt').fixedCenter();
+      }
+
+      function add_compass_hex(id) {
+        var hex = $("<div id='" + id + "' class='hex2'></div>");
+        $("body").append(hex);
+
+        var txt = $("<div id='txt' class='txt'>").html(id);
+        var hex_id = '#' + id;
+        //$(hex_id).append(txt);
+      }
+
+      function plot_players(id, event) {
+        current_lat = event.players[event.id].lat;
+        current_lon = event.players[event.id].lon;
+
+        for (var player_id in event.players) {
+          if (player_id == id) {
+            continue; // Skip yourself
+          }
+
+          player = event.players[player_id];
+
+          // add hex if none exists at NE/SE/SW/etc
+          // might need to calculate distance too? to stop very close check-ins from affecting the game?
+          var bearing = Bearing(current_lat, current_lon, player.lat, player.lon);
+
+          if (bearing <= 90) {
+            add_compass_hex('ne');
+          } else if (bearing <= 180) {
+            add_compass_hex('se');
+          } else if (bearing <= 270) {
+            add_compass_hex('sw');
+          } else if (bearing <= 360) {
+            add_compass_hex('nw');
+          }
+
+          // bump up the player numbers for that hex
+        }
+      }
+
+      window.onload = function() {
+        connect();
+      }
+    </script>
+  </body>
+</html>

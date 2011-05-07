@@ -1,0 +1,250 @@
+<html>
+  <head>
+    <title>teevee</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>  
+    <script type="text/javascript" src="lib/utils.js"></script>
+    <script type="text/javascript" src="lib/fixedCenter.jQuery.js"</script>
+    <script type="text/javascript" src="lib/prettyprint.js"></script>
+    <style>
+      body {
+        background-image:url('images/bg//hex.jpg');
+        background-position: bottom left;
+        color: #fff;
+      }
+      .hex {
+        height: 128px;
+        width: 128px;
+        background-image:url('images/tiles/orange-128.png');
+      }
+      .hex .txt {
+        width: 128px;
+        text-align: center;
+      }
+      .hex2 {
+        height: 128px;
+        width: 128px;
+      }
+      #ne {
+        position: absolute;
+        top: 40px;
+        right: 150px;
+        background-image:url('images/tiles/green-128.png');
+      }
+      #se {
+        position: absolute;
+        bottom: 40px;
+        right: 150px;
+        background-image:url('images/tiles/yellow-128.png');
+      }
+      #sw {
+        position: absolute;
+        bottom: 40px;
+        left: 150px;
+        background-image:url('images/tiles/red-128.png');
+      }
+      #nw {
+        position: absolute;
+        top: 40px;
+        left: 150px;
+        background-image:url('images/tiles/blue-128.png');
+      }
+    </style>
+  </head>
+  <body>
+		<div id="log"></div>
+
+    <script type="text/javascript">
+      function RadToDeg(radians) {
+        return radians * (180 / Math.PI);
+      }
+
+      function DegToRad(degrees) {
+          return degrees * (Math.PI / 180); 
+      }
+
+      function ConvertToBearing(deg) {
+          return (deg + 360) % 360;
+      }
+
+      // Calculate bearing, from http://www.sergemeunier.com/blog/finding-the-bearing-between-two-gps-coordinates
+      function Bearing(lat1, long1, lat2, long2) {
+          //Convert input values to radians 
+          var lat1 = DegToRad(lat1);
+          var long1 = DegToRad(long1);
+          var lat2 = DegToRad(lat2);
+          var long2 = DegToRad(long2);
+
+          var deltaLong = long2 - long1;
+
+          var y = Math.sin(deltaLong) * Math.cos(lat2);
+          var x = Math.cos(lat1) * Math.sin(lat2) -
+          Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLong);
+          var bearing = Math.atan2(y, x);
+          return ConvertToBearing(RadToDeg(bearing));
+      }
+
+      // Calculate distance, from http://github.com/palfrey/nearby_art/blob/master/index.html
+      if (typeof(Number.prototype.toRad) === "undefined") {
+        Number.prototype.toRad = function() {
+          return this * Math.PI / 180;
+        }
+      }
+
+      function longLatDistance(lat1, lon1, lat2, lon2)
+      {
+        // Taken from http://www.movable-type.co.uk/scripts/latlong.html
+        // Using Haversine formula http://en.wikipedia.org/wiki/Haversine_formula
+        var R = 6371; // km
+        var dLat = (lat2-lat1).toRad();
+        var dLon = (lon2-lon1).toRad(); 
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        var d = R * c;
+        return d;
+      }
+
+      var conn;
+      var text;
+      var players = [];
+      var output_log = document.getElementById("log");
+
+      var connect = function() {
+        if (window["WebSocket"]) {
+          conn = new WebSocket("ws://173.45.236.98:1975/teevee");
+          conn.onmessage = function(evt) {
+            event = JSON.parse(evt.data);
+
+            if (event.type == 'connection') {
+              add_hex(event);
+              plot_players(event.id, event);
+            } else if (event.type == 'location') {
+              plot_players(event.id, event);
+            } else if (event.type == 'disconnection') {
+              remove_player(event.id, event);
+            } else {
+              // derp derp derp
+            }
+          };
+          
+          // Must decrement/remove hexagons on the compass as required
+          conn.onclose = function() {};
+
+          conn.onopen = function() {
+            navigator.geolocation.getCurrentPosition(track_location, handle_error, {maximumAge:Infinity, timeout:0});
+
+            function track_location(position)
+            {
+              var lat = position.coords.latitude;
+              var lon = position.coords.longitude;
+
+              try {
+                conn.send(JSON.stringify({
+                  event_type: 'location',
+                  lat: lat,
+                  lon: lon,
+                }));    
+              } catch(err) {
+                alert(err);
+              }
+            }
+
+            // From: http://dev.w3.org/geo/api/spec-source.html
+            function handle_error(error)
+            {
+              switch(error.code) {
+                case error.TIMEOUT:
+                  //alert("Still looking...");
+                  navigator.geolocation.getCurrentPosition(track_location, handle_error);
+                  break;
+                default:
+                  alert("This is, like, cutting edge stuffs and you might be, like, bleeding a trail on the blazing edge?");
+                  alert(error.code);
+                  alert(error.message);
+              };
+            }
+          }
+        } else {
+          alert("Failed to load WebSocket");
+        }
+      }
+
+      function add_hex(event) {
+        var hex = $("<div id='player1' class='hex'></div>");
+        $("body").append(hex);
+        $('#player1').fixedCenter();
+
+        var txt = $("<div id='txt' class='txt'>").html("apogee: " + event.id + "<br/>");
+        $('#player1').append(txt);
+        $('#txt').fixedCenter();
+      }
+
+      function add_compass_hex(id) {
+        if (players[id]) {
+          players[id] = players[id] + 1;
+        } else {
+          players[id] = 1;
+        }
+        
+        var hex = $("<div id='" + id + "' class='hex2'></div>");
+        $("body").append(hex);
+
+        var hex_id = '#' + id;
+        //$(hex_id).append(players[id]);
+        $(hex_id).text(players[id]);
+      }
+
+      function plot_players(id, event) {
+        current_lat = event.players[event.id].lat;
+        current_lon = event.players[event.id].lon;
+
+        for (var player_id in event.players) {
+          if (player_id == id) {
+            continue; // Skip yourself
+          }
+
+          player = event.players[player_id];
+
+          if (!current_lat || !current_lon || !player.lat || !player.lon) {
+            // Needs current lat etc, before we can plot players. Bah...
+            continue;
+          }
+
+          var bearing = Bearing(current_lat, current_lon, player.lat, player.lon);
+          var distance = longLatDistance(current_lat, current_lon, player.lat, player.lon);
+          //alert(distance + " km from here");
+          //alert(Math.round(distance * 1000) + " metres from here"); 
+
+          // add hex if none exists at NE/SE/SW/etc
+          // if distance is close, add to the centre hexagon
+
+          if (bearing <= 90) {
+            add_compass_hex('ne');
+          } else if (bearing <= 180) {
+            add_compass_hex('se');
+          } else if (bearing <= 270) {
+            add_compass_hex('sw');
+          } else if (bearing <= 360) {
+            add_compass_hex('nw');
+          }
+        }
+      }
+
+      function remove_player(event) {
+        // figure out the leaving players' bearing from you
+        // decrement the counter or remove the hexagon
+        current_lat = event.players[event.id].lat;
+        current_lon = event.players[event.id].lon;
+
+        player = event.players[id];
+        var bearing = Bearing(current_lat, current_lon, player.lat, player.lon);
+      }
+
+      window.onload = function() {
+        connect();
+      }
+    </script>
+  </body>
+</html>

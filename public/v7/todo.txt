@@ -1,0 +1,5 @@
+On connection, give new players a list of who is online and where they are (the players hash)
+Increment "close" score for central hexagon
+Decrement and/or remove hexagons on close
+Flash fallback for Websocket
+Keynote to show the location -based board-gaming/game-show element to the game

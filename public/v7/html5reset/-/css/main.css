@@ -1,0 +1,32 @@
+
+/*-  CSS "libraries"
+----------------------------------------------------------------------*/
+@import url("reset.css");
+
+
+/*-  Core, patch-free design
+----------------------------------------------------------------------*/
+@import url("core.css");
+
+
+/*-  Browser-specific patches
+----------------------------------------------------------------------*/
+/*\*//*/
+@import url("patches/mac-ie5.css");
+/**/
+
+
+body {
+  background-image:url('images/bg//hex.jpg');
+  background-position: bottom left;
+  color: #fff;
+}
+.hex {
+  height: 512px;
+  width: 512px;
+  background-image:url('images/tiles/orange.png');
+}
+.hex .txt {
+  width: 512px;
+  text-align: center;
+}
